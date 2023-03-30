@@ -23,7 +23,7 @@
 		</select>
 		<input type="submit" name="submit" value="Submit" class="bg-primary rounded-pill text-white border border-dark">
 	</form>
-	<table class="table table-dark table-hover table-bordered border-primary mt-4">
+	<table class='table table-dark table-hover table-bordered border-primary mt-4 '>
 		<tr>
 			<th>Title</th>
 			<th>Author</th>
