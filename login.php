@@ -1,94 +1,67 @@
 <?php
-	session_start();
-	
-	$conn = new mysqli('localhost','root','','sms_db');
-	
-	$unsuccessfulmsg = '';
+// Start the session
+session_start();
 
-	if(isset($_POST['submit'])){
-		$users_email 			= $_POST['users_email'];
-		$users_password 		= $_POST['users_password'];
-		$passwordmd5 	= md5($users_password);
-		
-		if(empty($users_email)){
-			$emailmsg = 'Enter an email.';
-		}else{
-			$emailmsg = '';
-		}
-		
-		if(empty($users_password)){
-			$passmsg = 'Enter your password.';
-		}else{
-			$passmsg = '';
-		}
-		
-		if(!empty($users_email) && !empty($users_password)){
-			$sql = "SELECT * FROM users WHERE users_email='$users_email' AND users_password = '$passwordmd5'";
-			$query = $conn->query($sql);
-			
-			if($query->num_rows > 0){
-				$row = $query->fetch_assoc();
-				$users_first_name = $row['users_first_name'];
-				$users_last_name = $row['users_last_name'];
-				
-				$_SESSION['users_last_name'] = $users_last_name;
-				$_SESSION['users_first_name'] = $users_first_name;
-				header('location:dashboard.php');
-			}else{
-				$unsuccessfulmsg = 'Wrong email or Password!';
-			}
-		}
-	}
+// Check if the user is already logged in, redirect to home page if true
+if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] == true) {
+    header('Location: pageForCustomers.php');
+    exit;
+}
+
+// Check if the form has been submitted
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // Retrieve the form data
+    $username = $_POST['username'];
+    $password = $_POST['password'];
+
+    // TODO: Validate the form data
+
+    // Connect to the database
+    $servername = 'localhost';
+    $username_db = 'root';
+    $password_db = '';
+    $dbname = 'bookshop';
+    $conn = new mysqli($servername, $username_db, $password_db, $dbname);
+
+    // Check connection
+    if ($conn->connect_error) {
+        die('Connection failed: ' . $conn->connect_error);
+    }
+
+    // Prepare and execute the SQL statement to check the username and password
+    $stmt = $conn->prepare('SELECT user_id, username, password FROM users WHERE username = ?');
+    $stmt->bind_param('s', $username);
+    $stmt->execute();
+    $stmt->store_result();
+
+    // Check if the username exists in the database
+    if ($stmt->num_rows > 0) {
+        // Bind the results to variables
+        $stmt->bind_result($id, $username, $hashed_password);
+        $stmt->fetch();
+
+        // Verify the password
+        if (password_verify($password, $hashed_password)) {
+            // Password is correct, start the session
+            session_regenerate_id();
+            $_SESSION['loggedin'] = true;
+            $_SESSION['username'] = $username;
+            $_SESSION['id'] = $id;
+
+            // Redirect to the home page
+            header('Location: home.php');
+            exit;
+        } else {
+            // Password is incorrect
+            echo 'Invalid username or password.';
+        }
+    } else {
+        // Username is not found in the database
+        echo 'Invalid username or password.';
+    }
+
+    // Close the statement and connection
+    $stmt->close();
+    $conn->close();
+}
 ?>
-
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>Login</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css">
-	</head>
-	
-	<body>
-		<div class="container">
-			<div class="container" style="margin-top:50px">
-				<h3 class="text-center">Login System</h3>
-				<p class="text-center text-success">
-				<?php if(!empty($_SESSION['signupmsg'])){ echo $_SESSION['signupmsg']; } ?></p>
-			</div>
-			<div class="container" style="margin-top:50px">
-				<div class="row">
-					<div class="col-sm-4">
-						
-					</div>
-					<div class="col-sm-4">
-						<div class="container bg-light p-4">
-							<p class="text-danger"><?php echo $unsuccessfulmsg ?> </p>
-							<form action="" method="POST">
-							<div class="mt-2 pb-2">
-								<label for="email">Email:</label>
-								<input type="email" name="users_email" class="form-control" placeholder="Enter your email" value="<?php if(isset($_POST['submit'])){echo $users_email; } ?>">
-								<span class="text-danger"><?php if(isset($_POST['submit'])){ echo $emailmsg; }?></span>
-							</div>
-							<div class="mt-1 pb-2">
-								<label for="password">Password:</label>
-								<input type="password" name="users_password" class="form-control" placeholder="Enter your password">
-								<span class="text-danger"><?php if(isset($_POST['submit'])){ echo $passmsg; }?></span>
-							</div>
-							<div class="mt-1 pb-2">
-								<button name="submit" class="btn btn-success">Login</button>
-							</div>
-							<div class="mt-1 pb-2">
-								Not an account? <a href="signup.php" class="text-decoration-none">Sign Up</a>
-							</div>
-						</div>
-					</div>
-					<div class="col-sm-4">
-						
-					</div>
-				</div>
-			</div>
-		</div>
-	</body>
-</html>
